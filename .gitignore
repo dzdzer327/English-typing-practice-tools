@@ -1,0 +1,28 @@
+# Dependencies
+frontend/node_modules/
+
+# Build outputs
+frontend/dist/
+frontend/release/
+backend/target/
+
+# Logs
+*.log
+
+# Local IDE files
+backend/.idea/
+*.iml
+
+# TypeScript cache
+*.tsbuildinfo
+frontend/node_modules/.tmp/
+
+# Environment and OS files
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+
+# Local screenshots
+屏幕截图*.png
