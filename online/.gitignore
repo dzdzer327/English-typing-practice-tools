@@ -1,22 +1,21 @@
 # Dependencies
-**/frontend/node_modules/
+frontend/node_modules/
 
 # Build outputs
-**/frontend/dist/
-**/frontend/release/
-**/frontend/electron-backend/
-**/backend/target/
+frontend/dist/
+frontend/release/
+backend/target/
 
 # Logs
 *.log
 
 # Local IDE files
-**/backend/.idea/
+backend/.idea/
 *.iml
 
 # TypeScript cache
 *.tsbuildinfo
-**/frontend/node_modules/.tmp/
+frontend/node_modules/.tmp/
 
 # Environment and OS files
 .env

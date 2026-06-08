@@ -1,0 +1,70 @@
+{
+  "name": "typing-practice",
+  "private": true,
+  "version": "1.0.0",
+  "description": "英语打字练习桌面应用",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "electron": "electron .",
+    "start": "node start.js",
+    "build": "tsc -b && vite build",
+    "electron:build": "npm run build && electron-builder",
+    "standalone:prepare": "cd ../backend && mvn clean package -DskipTests && cd ../frontend && node scripts/prepare-standalone.js",
+    "standalone:dir": "npm run standalone:prepare && npm run build && node scripts/ensure-electron-dist.js && electron-builder --dir --publish never",
+    "standalone:build": "npm run standalone:dir",
+    "standalone:installer": "npm run standalone:prepare && npm run build && electron-builder --publish never",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.16.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^7.16.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.12.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "electron": "^42.3.0",
+    "electron-builder": "^26.8.1",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.59.2",
+    "vite": "^8.0.12",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "com.typing.practice",
+    "electronDist": "node_modules/electron/dist",
+    "productName": "英语打字练习",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "electron-backend/typing-practice.jar",
+        "to": "backend/typing-practice.jar"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}

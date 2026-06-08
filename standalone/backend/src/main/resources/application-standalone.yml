@@ -1,0 +1,26 @@
+server:
+  port: ${TYPING_BACKEND_PORT:8080}
+
+spring:
+  datasource:
+    url: jdbc:h2:file:${TYPING_DATA_DIR:./data}/typing_practice;MODE=MySQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.H2Dialect
+
+  h2:
+    console:
+      enabled: false
+
+app:
+  checkin:
+    streak-milestones: [7, 30, 100, 365]
