@@ -1,6 +1,7 @@
 package com.typing.backend.controller;
 
 import com.typing.backend.dto.ApiResponse;
+import com.typing.backend.dto.WordItem;
 import com.typing.backend.service.ContentService;
 import com.typing.backend.service.PracticeTrackingService;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,19 @@ public class ContentController {
             @RequestParam(defaultValue = "beginner") String level,
             @RequestParam(defaultValue = "20") int count) {
         List<String> words = contentService.getWords(userId, level, count);
+        return ApiResponse.success(words);
+    }
+
+    /**
+     * 获取练习单词和中文翻译（排除已掌握的）
+     * GET /api/content/word-items?userId=1&level=beginner&count=20
+     */
+    @GetMapping("/word-items")
+    public ApiResponse<List<WordItem>> getWordItems(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "beginner") String level,
+            @RequestParam(defaultValue = "20") int count) {
+        List<WordItem> words = contentService.getWordItems(userId, level, count);
         return ApiResponse.success(words);
     }
 

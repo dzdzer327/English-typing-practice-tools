@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { authApi, contentApi, practiceApi } from '../api';
 import TypingArea from '../components/TypingArea';
-import type { User } from '../types';
+import type { User, WordItem } from '../types';
 
 interface PracticeProps {
   user: User;
@@ -13,6 +13,7 @@ export default function Practice({ user, onUserUpdate }: PracticeProps) {
   const [difficulty, setDifficulty] = useState<'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'>('BEGINNER');
   const [text, setText] = useState('');
   const [currentContent, setCurrentContent] = useState<string[]>([]);
+  const [wordHints, setWordHints] = useState<WordItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
     wpm: number;
@@ -31,16 +32,19 @@ export default function Practice({ user, onUserUpdate }: PracticeProps) {
       const level = difficulty.toLowerCase();
       switch (mode) {
         case 'WORDS':
-          res = await contentApi.getWords(user.id, level, 15);
-          setCurrentContent(res.data.data);
-          setText(res.data.data.join(' '));
+          res = await contentApi.getWordItems(user.id, level, 15);
+          setWordHints(res.data.data);
+          setCurrentContent(res.data.data.map(item => item.word));
+          setText(res.data.data.map(item => item.word).join(' '));
           break;
         case 'SENTENCE':
+          setWordHints([]);
           res = await contentApi.getSentences(user.id, level, 3);
           setCurrentContent(res.data.data);
           setText(res.data.data.join(' '));
           break;
         case 'ARTICLE':
+          setWordHints([]);
           res = await contentApi.getArticles('technology', 1);
           setCurrentContent(res.data.data);
           setText(res.data.data[0]);
@@ -48,6 +52,7 @@ export default function Practice({ user, onUserUpdate }: PracticeProps) {
       }
     } catch (err) {
       console.error('加载内容失败', err);
+      setWordHints([]);
       setText('The quick brown fox jumps over the lazy dog. Practice makes perfect.');
     } finally {
       setLoading(false);
@@ -163,7 +168,7 @@ export default function Practice({ user, onUserUpdate }: PracticeProps) {
           加载中...
         </div>
       ) : (
-        <TypingArea text={text} onComplete={handleComplete} />
+        <TypingArea text={text} wordHints={wordHints} onComplete={handleComplete} />
       )}
 
       {/* 重新开始按钮 */}

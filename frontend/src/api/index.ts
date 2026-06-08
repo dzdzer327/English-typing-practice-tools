@@ -8,6 +8,7 @@ import type {
   CheckInRecord,
   DailyPracticeStat,
   PracticeOverview,
+  WordItem,
 } from '../types';
 
 const api = axios.create({
@@ -72,6 +73,9 @@ export const checkInApi = {
 export const contentApi = {
   getWords: (userId: number, level = 'beginner', count = 20) =>
     api.get<ApiResponse<string[]>>(`/content/words?userId=${userId}&level=${level}&count=${count}`),
+
+  getWordItems: (userId: number, level = 'beginner', count = 20) =>
+    api.get<ApiResponse<WordItem[]>>(`/content/word-items?userId=${userId}&level=${level}&count=${count}`),
 
   getSentences: (userId: number, level = 'beginner', count = 5) =>
     api.get<ApiResponse<string[]>>(`/content/sentences?userId=${userId}&level=${level}&count=${count}`),

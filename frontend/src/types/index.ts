@@ -25,6 +25,11 @@ export interface PracticeRecord {
   createdAt: string;
 }
 
+export interface WordItem {
+  word: string;
+  translation: string;
+}
+
 export interface CheckInStats {
   currentStreak: number;
   longestStreak: number;

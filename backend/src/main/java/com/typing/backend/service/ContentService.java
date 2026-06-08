@@ -2,6 +2,7 @@ package com.typing.backend.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.typing.backend.dto.WordItem;
 import com.typing.backend.repository.UserSentencePracticeRepository;
 import com.typing.backend.repository.UserWordPracticeRepository;
 import org.springframework.core.io.ClassPathResource;
@@ -14,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class ContentService {
@@ -30,6 +32,7 @@ public class ContentService {
     private List<String> beginnerWords = new ArrayList<>();
     private List<String> intermediateWords = new ArrayList<>();
     private List<String> advancedWords = new ArrayList<>();
+    private Map<String, String> wordTranslations = new HashMap<>();
 
     // 离线句子库（从 content.json 加载）
     private List<String> beginnerSentences = new ArrayList<>();
@@ -50,6 +53,7 @@ public class ContentService {
     @PostConstruct
     public void init() {
         loadWords();
+        loadWordTranslations();
         loadContent();
     }
 
@@ -70,6 +74,19 @@ public class ContentService {
             beginnerWords = List.of("the", "be", "to", "of", "and");
             intermediateWords = List.of("computer", "keyboard", "practice");
             advancedWords = List.of("sophisticated", "comprehensive");
+        }
+    }
+
+    private void loadWordTranslations() {
+        try {
+            ClassPathResource resource = new ClassPathResource("word_translations.json");
+            try (InputStream is = resource.getInputStream()) {
+                wordTranslations = objectMapper.readValue(is, new TypeReference<>() {});
+                System.out.println("单词翻译加载完成: " + wordTranslations.size());
+            }
+        } catch (IOException e) {
+            System.err.println("单词翻译加载失败: " + e.getMessage());
+            wordTranslations = new HashMap<>();
         }
     }
 
@@ -138,8 +155,50 @@ public class ContentService {
             available = new ArrayList<>(wordList);
         }
 
-        Collections.shuffle(available);
-        return available.subList(0, Math.min(count, available.size()));
+        return weightedSample(available, count);
+    }
+
+    public List<WordItem> getWordItems(Long userId, String level, int count) {
+        return getWords(userId, level, count).stream()
+                .map(word -> new WordItem(word, getTranslation(word)))
+                .toList();
+    }
+
+    private String getTranslation(String word) {
+        String translation = wordTranslations.get(word);
+        if (translation == null) {
+            translation = wordTranslations.get(word.toLowerCase(Locale.ROOT));
+        }
+        return translation == null ? "暂无翻译" : translation;
+    }
+
+    private List<String> weightedSample(List<String> words, int count) {
+        List<String> pool = new ArrayList<>(words);
+        List<String> result = new ArrayList<>();
+        int targetSize = Math.min(count, pool.size());
+
+        while (result.size() < targetSize) {
+            double totalWeight = 0;
+            for (int i = 0; i < pool.size(); i++) {
+                totalWeight += frequencyWeight(i);
+            }
+
+            double pick = ThreadLocalRandom.current().nextDouble(totalWeight);
+            double cursor = 0;
+            for (int i = 0; i < pool.size(); i++) {
+                cursor += frequencyWeight(i);
+                if (cursor >= pick) {
+                    result.add(pool.remove(i));
+                    break;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private double frequencyWeight(int index) {
+        return 1.0 / Math.pow(index + 12, 0.85);
     }
 
     /**

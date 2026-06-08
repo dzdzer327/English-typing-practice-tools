@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { contentApi, practiceApi, checkInApi, authApi } from '../api';
 import TypingArea from '../components/TypingArea';
-import type { User } from '../types';
+import type { User, WordItem } from '../types';
 
 interface DailyChallengeProps {
   user: User;
@@ -12,6 +12,7 @@ interface Challenge {
   type: 'words' | 'sentence';
   content: string[];
   text: string;
+  wordHints?: WordItem[];
 }
 
 export default function DailyChallenge({ user, onUserUpdate }: DailyChallengeProps) {
@@ -35,15 +36,25 @@ export default function DailyChallenge({ user, onUserUpdate }: DailyChallengePro
     try {
       // 获取 2 组单词 + 2 组句子
       const [words1, words2, sentences1, sentences2] = await Promise.all([
-        contentApi.getWords(user.id, 'beginner', 10),
-        contentApi.getWords(user.id, 'intermediate', 10),
+        contentApi.getWordItems(user.id, 'beginner', 10),
+        contentApi.getWordItems(user.id, 'intermediate', 10),
         contentApi.getSentences(user.id, 'beginner', 2),
         contentApi.getSentences(user.id, 'intermediate', 2),
       ]);
 
       const challengeList: Challenge[] = [
-        { type: 'words', content: words1.data.data, text: words1.data.data.join(' ') },
-        { type: 'words', content: words2.data.data, text: words2.data.data.join(' ') },
+        {
+          type: 'words',
+          content: words1.data.data.map(item => item.word),
+          text: words1.data.data.map(item => item.word).join(' '),
+          wordHints: words1.data.data,
+        },
+        {
+          type: 'words',
+          content: words2.data.data.map(item => item.word),
+          text: words2.data.data.map(item => item.word).join(' '),
+          wordHints: words2.data.data,
+        },
         { type: 'sentence', content: sentences1.data.data, text: sentences1.data.data.join(' ') },
         { type: 'sentence', content: sentences2.data.data, text: sentences2.data.data.join(' ') },
       ];
@@ -219,6 +230,7 @@ export default function DailyChallenge({ user, onUserUpdate }: DailyChallengePro
       <TypingArea
         key={currentChallengeIndex}
         text={currentChallenge.text}
+        wordHints={currentChallenge.wordHints || []}
         onComplete={handleChallengeComplete}
       />
 

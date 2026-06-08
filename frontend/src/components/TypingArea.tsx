@@ -1,7 +1,25 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { memo, useState, useEffect, useCallback, useRef } from 'react';
+import type { WordItem } from '../types';
+
+type CharStatus = 'correct' | 'incorrect' | 'current' | 'pending';
+
+const TypingChar = memo(function TypingChar({
+  char,
+  status,
+}: {
+  char: string;
+  status: CharStatus;
+}) {
+  return (
+    <span className={`char ${status}`}>
+      {char === ' ' ? ' ' : char}
+    </span>
+  );
+});
 
 interface TypingAreaProps {
   text: string;
+  wordHints?: WordItem[];
   onComplete: (result: {
     wpm: number;
     accuracy: number;
@@ -12,14 +30,13 @@ interface TypingAreaProps {
   }) => void;
 }
 
-export default function TypingArea({ text, onComplete }: TypingAreaProps) {
+export default function TypingArea({ text, wordHints = [], onComplete }: TypingAreaProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [charStates, setCharStates] = useState<Map<number, 'correct' | 'incorrect'>>(new Map());
   const [isStarted, setIsStarted] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [startTime, setStartTime] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const cursorRef = useRef<HTMLSpanElement>(null);
 
   // 重置状态
   const reset = useCallback(() => {
@@ -43,12 +60,9 @@ export default function TypingArea({ text, onComplete }: TypingAreaProps) {
 
   // 光标自动滚动到可见区域
   useEffect(() => {
-    if (cursorRef.current) {
-      cursorRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'nearest',
-      });
+    const cursor = containerRef.current?.querySelector('.char.current');
+    if (cursor) {
+      cursor.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
   }, [currentIndex]);
 
@@ -141,32 +155,50 @@ export default function TypingArea({ text, onComplete }: TypingAreaProps) {
     }
   }, [currentIndex, isStarted, isFinished, startTime, text, charStates, onComplete, reset]);
 
+  const getCharStatus = (index: number): CharStatus => {
+    const state = charStates.get(index);
+
+    if (index < currentIndex) {
+      return state === 'incorrect' ? 'incorrect' : 'correct';
+    }
+    if (index === currentIndex) return 'current';
+    return 'pending';
+  };
+
+  const renderChar = (char: string, index: number) => {
+    return <TypingChar key={index} char={char} status={getCharStatus(index)} />;
+  };
+
+  const renderWordHints = () => {
+    let offset = 0;
+
+    return (
+      <div className="word-hint-grid">
+        {wordHints.map((item, wordIndex) => {
+          const chars = item.word.split('').map((char, charIndex) => renderChar(char, offset + charIndex));
+          offset += item.word.length;
+
+          const space = wordIndex < wordHints.length - 1
+            ? renderChar(' ', offset++)
+            : null;
+
+          return (
+            <span key={`${item.word}-${wordIndex}`} className="word-hint-item">
+              <span className="word-hint-text">
+                {chars}
+                {space}
+              </span>
+              <span className="word-hint-translation">{item.translation}</span>
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
   // 渲染字符
-  const renderChars = () => {
-    return text.split('').map((char, index) => {
-      let className = 'char';
-      const state = charStates.get(index);
-
-      if (index < currentIndex) {
-        className += state === 'incorrect' ? ' incorrect' : ' correct';
-      } else if (index === currentIndex) {
-        className += ' current';
-      } else {
-        className += ' pending';
-      }
-
-      const isCursor = index === currentIndex;
-
-      return (
-        <span
-          key={index}
-          ref={isCursor ? cursorRef : undefined}
-          className={className}
-        >
-          {char === ' ' ? ' ' : char}
-        </span>
-      );
-    });
+  const renderLegacyChars = () => {
+    return text.split('').map((char, index) => renderChar(char, index));
   };
 
   return (
@@ -181,7 +213,7 @@ export default function TypingArea({ text, onComplete }: TypingAreaProps) {
           点击此处开始输入 · 按退格键删除 · 按 Tab 重新开始
         </div>
       )}
-      {renderChars()}
+      {wordHints.length > 0 ? renderWordHints() : renderLegacyChars()}
     </div>
   );
 }
