@@ -1,10 +1,95 @@
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog } = require('electron');
+const { spawn } = require('child_process');
+const fs = require('fs');
+const http = require('http');
 const path = require('path');
 
 // 开发环境判断
 const isDev = !app.isPackaged;
 
 let mainWindow;
+let backendProcess = null;
+const backendPort = process.env.TYPING_BACKEND_PORT || '8080';
+
+function getResourcePath(...segments) {
+  return isDev
+    ? path.join(__dirname, '..', '..', ...segments)
+    : path.join(process.resourcesPath, ...segments);
+}
+
+function getJavaCommand() {
+  const bundledJava = process.platform === 'win32'
+    ? getResourcePath('jre', 'bin', 'java.exe')
+    : getResourcePath('jre', 'bin', 'java');
+
+  return fs.existsSync(bundledJava) ? bundledJava : 'java';
+}
+
+function waitForBackend(timeoutMs = 30000) {
+  const startedAt = Date.now();
+
+  return new Promise((resolve, reject) => {
+    const ping = () => {
+      const req = http.get(`http://127.0.0.1:${backendPort}/api/health`, (res) => {
+        res.resume();
+        if (res.statusCode === 200) {
+          resolve();
+        } else {
+          retry();
+        }
+      });
+
+      req.on('error', retry);
+      req.setTimeout(1000, () => {
+        req.destroy();
+        retry();
+      });
+    };
+
+    const retry = () => {
+      if (Date.now() - startedAt > timeoutMs) {
+        reject(new Error('后端启动超时'));
+        return;
+      }
+      setTimeout(ping, 500);
+    };
+
+    ping();
+  });
+}
+
+async function startBackend() {
+  if (isDev) return;
+
+  const backendJar = getResourcePath('backend', 'typing-practice.jar');
+  if (!fs.existsSync(backendJar)) {
+    throw new Error(`找不到后端文件: ${backendJar}`);
+  }
+
+  const dataDir = path.join(app.getPath('userData'), 'data');
+  fs.mkdirSync(dataDir, { recursive: true });
+
+  backendProcess = spawn(getJavaCommand(), [
+    '-jar',
+    backendJar,
+    '--spring.profiles.active=standalone',
+    `--server.port=${backendPort}`,
+  ], {
+    env: {
+      ...process.env,
+      TYPING_DATA_DIR: dataDir,
+      TYPING_BACKEND_PORT: backendPort,
+    },
+    windowsHide: true,
+    stdio: 'ignore',
+  });
+
+  backendProcess.on('exit', () => {
+    backendProcess = null;
+  });
+
+  await waitForBackend();
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -95,8 +180,15 @@ function createMenu() {
 }
 
 app.whenReady().then(() => {
-  createMenu();
-  createWindow();
+  startBackend()
+    .then(() => {
+      createMenu();
+      createWindow();
+    })
+    .catch((error) => {
+      dialog.showErrorBox('启动失败', `无法启动本地后端服务。\n\n${error.message}`);
+      app.quit();
+    });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -108,5 +200,12 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+app.on('before-quit', () => {
+  if (backendProcess) {
+    backendProcess.kill();
+    backendProcess = null;
   }
 });

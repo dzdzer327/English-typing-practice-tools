@@ -10,6 +10,10 @@
     "start": "node start.js",
     "build": "tsc -b && vite build",
     "electron:build": "npm run build && electron-builder",
+    "standalone:prepare": "cd ../backend && mvn clean package -DskipTests && cd ../frontend && node scripts/prepare-standalone.js",
+    "standalone:dir": "npm run standalone:prepare && npm run build && electron-builder --dir --publish never",
+    "standalone:build": "npm run standalone:dir",
+    "standalone:installer": "npm run standalone:prepare && npm run build && electron-builder --publish never",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -38,6 +42,7 @@
   },
   "build": {
     "appId": "com.typing.practice",
+    "electronDist": "node_modules/electron/dist",
     "productName": "英语打字练习",
     "directories": {
       "output": "release"
@@ -46,9 +51,15 @@
       "dist/**/*",
       "electron/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "electron-backend/typing-practice.jar",
+        "to": "backend/typing-practice.jar"
+      }
+    ],
     "win": {
       "target": "nsis",
-      "icon": "public/favicon.svg"
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,
